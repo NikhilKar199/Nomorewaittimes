@@ -74,13 +74,14 @@
       font-size: 14px;
     }
   </style>
+  <link rel="stylesheet" href="./theme.css">
   
     <link rel="stylesheet" href="https://pyscript.net/latest/pyscript.css">
     <script defer src="https://pyscript.net/latest/pyscript.js"></script>
 
   
 </head>
-<body>
+<body class="theme-blue-purple">
 
       <!-- Ride Sorting Section -->
     <section id="ride-sorter">
@@ -102,6 +103,97 @@ def sort_rides(event=None):
 document.getElementById("sort-rides-btn").addEventListener("click", sort_rides)
         </py-script>
     </section>
+
+  <!-- Efficient Ride Layout Optimizer -->
+  <section id="ride-optimizer" class="card" style="padding: 20px; max-width: 900px; margin: 20px auto;">
+    <h2>Efficient Ride Layout</h2>
+    <p class="muted">Paste ride data (CSV: name,x,y,duration_min,wait_min,priority[1-5]). Higher priority means more important.</p>
+    <textarea id="ride-data" rows="6" style="width:100%;" placeholder="Big Coaster,10,5,4,60,5
+Carousel,12,7,3,15,2
+River Rapids,3,9,6,55,4"></textarea>
+    <div style="display:flex; gap: 12px; align-items:center; margin: 10px 0;">
+      <label for="exclude-rides" style="min-width: 120px;">Exclude rides:</label>
+      <input id="exclude-rides" type="text" placeholder="comma-separated e.g. Carousel">
+      <button type="button" id="compute-layout-btn">Compute Layout</button>
+    </div>
+    <div id="layout-output" style="white-space: pre-wrap; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;"></div>
+
+    <py-script>
+from math import sqrt
+from js import document
+
+def parse_csv(text):
+    lines = [ln.strip() for ln in text.split('\n') if ln.strip()]
+    rides = []
+    for ln in lines:
+        parts = [p.strip() for p in ln.split(',')]
+        if len(parts) < 6:
+            # Try to be forgiving: pad with defaults
+            while len(parts) < 6:
+                parts.append('0')
+        name = parts[0]
+        try:
+            x = float(parts[1]); y = float(parts[2])
+            duration = float(parts[3]); wait = float(parts[4])
+            priority = float(parts[5]) if parts[5] else 3.0
+        except Exception:
+            # skip malformed lines
+            continue
+        rides.append({
+            'name': name,
+            'x': x, 'y': y,
+            'duration': duration,
+            'wait': wait,
+            'priority': priority,
+        })
+    return rides
+
+def distance(a, b):
+    return sqrt((a['x']-b['x'])**2 + (a['y']-b['y'])**2)
+
+def score(curr, nxt, w_dist=1.0, w_wait=0.15, w_priority=0.5):
+    # lower score is better
+    d = distance(curr, nxt)
+    # Subtract priority so higher priority reduces the cost
+    return w_dist*d + w_wait*max(nxt['wait'], 0) - w_priority*max(nxt['priority'], 0)
+
+def compute_route(rides):
+    if not rides:
+        return []
+    start = {'name': 'Start', 'x': 0.0, 'y': 0.0, 'duration': 0.0, 'wait': 0.0, 'priority': 0.0}
+    remaining = rides[:]
+    route = []
+    current = start
+    while remaining:
+        nxt = min(remaining, key=lambda r: score(current, r))
+        route.append(nxt)
+        remaining.remove(nxt)
+        current = nxt
+    return route
+
+def on_compute(event=None):
+    raw = document.getElementById('ride-data').value or ''
+    exclude = {n.strip().lower() for n in (document.getElementById('exclude-rides').value or '').split(',') if n.strip()}
+    rides = [r for r in parse_csv(raw) if r['name'].lower() not in exclude]
+    route = compute_route(rides)
+    lines = []
+    total_walk = 0.0
+    total_wait = 0.0
+    prev = {'name': 'Start', 'x': 0.0, 'y': 0.0, 'duration': 0.0, 'wait': 0.0, 'priority': 0.0}
+    for i, r in enumerate(route, 1):
+        d = distance(prev, r)
+        total_walk += d
+        total_wait += max(r['wait'], 0)
+        lines.append(f"{i}. {r['name']}  [walk≈{d:.1f}, wait≈{r['wait']:.0f}m, priority={r['priority']:.0f}]")
+        prev = r
+    if not lines:
+        lines = ["No rides parsed. Paste CSV data and try again."]
+    summary = f"Total estimated walk distance≈{total_walk:.1f} | Total wait≈{total_wait:.0f}m"
+    document.getElementById('layout-output').innerText = '\n'.join(lines+["", summary])
+
+document.getElementById('compute-layout-btn').addEventListener('click', on_compute)
+    </py-script>
+  </section>
 
 
   <!-- Breadcrumb Navigation -->
