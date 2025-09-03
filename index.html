@@ -92,15 +92,27 @@
         <div id="sorted-rides"></div>
 
         <py-script>
-from js import document
+from js import document, console
 
 def sort_rides(event=None):
-    rides = document.getElementById("ride-input").value
-    ride_list = [r.strip() for r in rides.split(",") if r.strip()]
-    ride_list.sort()
-    document.getElementById("sorted-rides").innerText = ", ".join(ride_list)
+    try:
+        input_el = document.getElementById("ride-input")
+        output_el = document.getElementById("sorted-rides")
+        if not input_el or not output_el:
+            return
+        rides = input_el.value or ""
+        ride_list = [r.strip() for r in rides.split(",") if r.strip()]
+        ride_list.sort()
+        output_el.innerText = ", ".join(ride_list)
+    except Exception as e:
+        try:
+            console.error(f"sort_rides error: {e}")
+        except Exception:
+            pass
 
-document.getElementById("sort-rides-btn").addEventListener("click", sort_rides)
+btn = document.getElementById("sort-rides-btn")
+if btn:
+    btn.addEventListener("click", sort_rides)
         </py-script>
     </section>
 
@@ -120,7 +132,7 @@ River Rapids,3,9,6,55,4"></textarea>
 
     <py-script>
 from math import sqrt
-from js import document
+from js import document, console
 
 def parse_csv(text):
     lines = [ln.strip() for ln in text.split('\n') if ln.strip()]
@@ -189,9 +201,13 @@ def on_compute(event=None):
     if not lines:
         lines = ["No rides parsed. Paste CSV data and try again."]
     summary = f"Total estimated walk distance≈{total_walk:.1f} | Total wait≈{total_wait:.0f}m"
-    document.getElementById('layout-output').innerText = '\n'.join(lines+["", summary])
+    out_el = document.getElementById('layout-output')
+    if out_el:
+        out_el.innerText = '\n'.join(lines+["", summary])
 
-document.getElementById('compute-layout-btn').addEventListener('click', on_compute)
+btn2 = document.getElementById('compute-layout-btn')
+if btn2:
+    btn2.addEventListener('click', on_compute)
     </py-script>
   </section>
 
