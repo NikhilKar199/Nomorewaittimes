@@ -183,27 +183,41 @@ def compute_route(rides):
         current = nxt
     return route
 
+def safe_get_value(element_id: str) -> str:
+    el = document.getElementById(element_id)
+    try:
+        return el.value if el else ''
+    except Exception:
+        return ''
+
 def on_compute(event=None):
-    raw = document.getElementById('ride-data').value or ''
-    exclude = {n.strip().lower() for n in (document.getElementById('exclude-rides').value or '').split(',') if n.strip()}
-    rides = [r for r in parse_csv(raw) if r['name'].lower() not in exclude]
-    route = compute_route(rides)
-    lines = []
-    total_walk = 0.0
-    total_wait = 0.0
-    prev = {'name': 'Start', 'x': 0.0, 'y': 0.0, 'duration': 0.0, 'wait': 0.0, 'priority': 0.0}
-    for i, r in enumerate(route, 1):
-        d = distance(prev, r)
-        total_walk += d
-        total_wait += max(r['wait'], 0)
-        lines.append(f"{i}. {r['name']}  [walk≈{d:.1f}, wait≈{r['wait']:.0f}m, priority={r['priority']:.0f}]")
-        prev = r
-    if not lines:
-        lines = ["No rides parsed. Paste CSV data and try again."]
-    summary = f"Total estimated walk distance≈{total_walk:.1f} | Total wait≈{total_wait:.0f}m"
-    out_el = document.getElementById('layout-output')
-    if out_el:
-        out_el.innerText = '\n'.join(lines+["", summary])
+    try:
+        raw = safe_get_value('ride-data')
+        exclude_raw = safe_get_value('exclude-rides')
+        exclude = {n.strip().lower() for n in exclude_raw.split(',') if n.strip()}
+        rides = [r for r in parse_csv(raw) if r['name'].lower() not in exclude]
+        route = compute_route(rides)
+        lines = []
+        total_walk = 0.0
+        total_wait = 0.0
+        prev = {'name': 'Start', 'x': 0.0, 'y': 0.0, 'duration': 0.0, 'wait': 0.0, 'priority': 0.0}
+        for i, r in enumerate(route, 1):
+            d = distance(prev, r)
+            total_walk += d
+            total_wait += max(r['wait'], 0)
+            lines.append(f"{i}. {r['name']}  [walk≈{d:.1f}, wait≈{r['wait']:.0f}m, priority={r['priority']:.0f}]")
+            prev = r
+        if not lines:
+            lines = ["No rides parsed. Paste CSV data and try again."]
+        summary = f"Total estimated walk distance≈{total_walk:.1f} | Total wait≈{total_wait:.0f}m"
+        out_el = document.getElementById('layout-output')
+        if out_el:
+            out_el.innerText = '\n'.join(lines+["", summary])
+    except Exception as e:
+        try:
+            console.error(f"on_compute error: {e}")
+        except Exception:
+            pass
 
 btn2 = document.getElementById('compute-layout-btn')
 if btn2:
