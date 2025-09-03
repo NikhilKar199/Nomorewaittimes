@@ -152,16 +152,35 @@
   <div id="output" style="white-space: pre-wrap; font-family: monospace;"></div>
 
 <py-script>
+from js import document, console
+
 def order_set(s: set) -> list:
-    # your algorithm
-    return sorted(s)
+    try:
+        return sorted(s)
+    except Exception as e:
+        try:
+            console.error(f"order_set error: {e}")
+        except Exception:
+            pass
+        return list(s)
 
-from js import document
-def on_click(event):
-    items = {e.strip() for e in document.getElementById('input_set').value.split(',') if e.strip()}
-    document.getElementById('output').innerText = ', '.join(order_set(items))
+def on_click(event=None):
+    try:
+        input_el = document.getElementById('input_set')
+        output_el = document.getElementById('output')
+        if not input_el or not output_el:
+            return
+        items = {e.strip() for e in (input_el.value or '').split(',') if e.strip()}
+        output_el.innerText = ', '.join(order_set(items))
+    except Exception as e:
+        try:
+            console.error(f"on_click error: {e}")
+        except Exception:
+            pass
 
-document.getElementById('run_btn').addEventListener('click', on_click)
+btn = document.getElementById('run_btn')
+if btn:
+    btn.addEventListener('click', on_click)
 </py-script>
 </section>
   
